@@ -5,6 +5,12 @@
   --foreground: #171717;
 }
 
+html, body {
+  max-width: 100vw;
+  overflow-x: hidden;
+  overscroll-behavior-y: contain; /* Prevents pull-to-refresh on mobile if you want a custom feel */
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
