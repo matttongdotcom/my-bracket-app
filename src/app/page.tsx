@@ -1,78 +1,123 @@
 'use client';
 
-import MatchupCard from '@/components/MatchupCard';
-import { Participant } from '@/types/tournament';
+import TournamentView from '@/components/TournamentView';
+import { TournamentResponseObject, Participant } from '@/types/tournament';
 
 export default function Home() {
-  // Sample Data
-  const entrant1: Participant = {
-    id: '1',
-    name: 'Team Alpha',
-    seed: 1,
-    votesInMatch: 10,
-  };
+  // --- Sample Data Generation ---
+  
+  const createParticipant = (id: string, name: string, seed: number): Participant => ({
+    id,
+    name,
+    seed,
+    votesInMatch: 0,
+  });
 
-  const entrant2: Participant = {
-    id: '2',
-    name: 'Team Beta',
-    seed: 16,
-    votesInMatch: 5,
-  };
+  const entrants = [
+    createParticipant('1', 'Crimson Tide', 1),
+    createParticipant('2', 'Blue Devils', 2),
+    createParticipant('3', 'Golden Eagles', 3),
+    createParticipant('4', 'Fighting Irish', 4),
+    createParticipant('5', 'Spartans', 5),
+    createParticipant('6', 'Wolverines', 6),
+    createParticipant('7', 'Buckeyes', 7),
+    createParticipant('8', 'Gators', 8),
+  ];
 
-  const entrant3: Participant = {
-    id: '3',
-    name: 'Team Gamma',
-    seed: 5,
-    votesInMatch: 20,
-  };
-
-  const entrant4: Participant = {
-    id: '4',
-    name: 'Team Delta',
-    seed: 12,
-    votesInMatch: 15,
+  const sampleTournament: TournamentResponseObject = {
+    id: 't1',
+    name: 'March Madness 2026',
+    status: 'open',
+    currentRound: 1,
+    totalEntrants: 8,
+    rounds: [
+      {
+        roundNumber: 1,
+        label: 'Quarter-Finals',
+        matchups: [
+          {
+            id: 'm1',
+            matchIndex: 0,
+            is_active: true,
+            entrant1: entrants[0], // Seed 1
+            entrant2: entrants[7], // Seed 8
+            winner_id: null,
+            totalVotes: 150,
+          },
+          {
+            id: 'm2',
+            matchIndex: 1,
+            is_active: true,
+            entrant1: entrants[3], // Seed 4
+            entrant2: entrants[4], // Seed 5
+            winner_id: null,
+            totalVotes: 120,
+          },
+          {
+            id: 'm3',
+            matchIndex: 2,
+            is_active: true,
+            entrant1: entrants[2], // Seed 3
+            entrant2: entrants[5], // Seed 6
+            winner_id: null,
+            totalVotes: 90,
+          },
+          {
+            id: 'm4',
+            matchIndex: 3,
+            is_active: true,
+            entrant1: entrants[1], // Seed 2
+            entrant2: entrants[6], // Seed 7
+            winner_id: null,
+            totalVotes: 200,
+          },
+        ],
+      },
+      {
+        roundNumber: 2,
+        label: 'Semi-Finals',
+        matchups: [
+          {
+            id: 'm5',
+            matchIndex: 4,
+            is_active: false,
+            entrant1: null, // Winner of m1
+            entrant2: null, // Winner of m2
+            winner_id: null,
+            totalVotes: 0,
+          },
+          {
+            id: 'm6',
+            matchIndex: 5,
+            is_active: false,
+            entrant1: null, // Winner of m3
+            entrant2: null, // Winner of m4
+            winner_id: null,
+            totalVotes: 0,
+          },
+        ],
+      },
+      {
+        roundNumber: 3,
+        label: 'Championship',
+        matchups: [
+          {
+            id: 'm7',
+            matchIndex: 6,
+            is_active: false,
+            entrant1: null,
+            entrant2: null,
+            winner_id: null,
+            totalVotes: 0,
+          },
+        ],
+      },
+    ],
   };
 
   return (
-    <main className="min-h-screen bg-slate-50 p-8 flex flex-col items-center gap-8">
-      <h1 className="text-3xl font-bold text-slate-800">Matchup Card Preview</h1>
-      
-      <div className="w-full max-w-md flex flex-col gap-6">
-        
-        <section>
-          <h2 className="text-sm font-semibold text-slate-500 mb-2 uppercase tracking-wide">Active Matchup</h2>
-          <MatchupCard 
-            matchId="m1"
-            entrant1={entrant1}
-            entrant2={entrant2}
-            isActive={true}
-            winnerId={null}
-          />
-        </section>
-
-        <section>
-          <h2 className="text-sm font-semibold text-slate-500 mb-2 uppercase tracking-wide">Completed Matchup (Winner: Team Gamma)</h2>
-          <MatchupCard 
-            matchId="m2"
-            entrant1={entrant3}
-            entrant2={entrant4}
-            isActive={false}
-            winnerId={entrant3.id}
-          />
-        </section>
-
-        <section>
-          <h2 className="text-sm font-semibold text-slate-500 mb-2 uppercase tracking-wide">Pending Matchup (TBD)</h2>
-          <MatchupCard 
-            matchId="m3"
-            entrant1={entrant1}
-            entrant2={null}
-            isActive={false}
-            winnerId={null}
-          />
-        </section>
-
-      </div>
+    <main className="min-h-screen bg-slate-100 flex justify-center">
+      <TournamentView tournament={sampleTournament} />
     </main>
   );
 }
