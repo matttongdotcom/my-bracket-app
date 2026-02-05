@@ -50,7 +50,7 @@ export default function LoginPage() {
         
         {/* Header */}
         <div className="bg-slate-900 p-8 text-center">
-          <h1 className="text-3xl font-bold text-white mb-2">Bracket App</h1>
+          <h1 className="text-3xl font-bold text-white mb-2">Hoxie House March Madness</h1>
           <p className="text-slate-400">
             {isSignUp ? 'Create an account to get started' : 'Welcome back!'}
           </p>
@@ -78,11 +78,13 @@ export default function LoginPage() {
               </label>
               <input
                 id="email"
+                name="email"
                 type="email"
+                autoComplete="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-slate-900 placeholder:text-slate-400"
                 placeholder="you@example.com"
               />
             </div>
@@ -93,11 +95,13 @@ export default function LoginPage() {
               </label>
               <input
                 id="password"
+                name="password"
                 type="password"
+                autoComplete="current-password"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-slate-900 placeholder:text-slate-400"
                 placeholder="••••••••"
               />
             </div>
@@ -116,7 +120,7 @@ export default function LoginPage() {
           </form>
 
           <div className="mt-6 text-center">
-            <p className="text-slate-600 text-sm">
+            <div className="text-slate-600 text-sm">
               {isSignUp ? 'Already have an account?' : "Don't have an account?"}
               <button
                 onClick={() => {
@@ -128,7 +132,7 @@ export default function LoginPage() {
               >
                 {isSignUp ? 'Sign In' : 'Sign Up'}
               </button>
-            </p>
+            </div>
           </div>
         </div>
       </div>
