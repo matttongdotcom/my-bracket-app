@@ -56,12 +56,23 @@ export default function MatchupCard({
       >
         <div className="flex items-center gap-3">
           <span className="text-xs font-bold text-slate-400">#{entrant.seed}</span>
-          <span className={`font-semibold text-left ${
-            isWinner ? 'text-green-700' : 
-            isSelected ? '!text-blue-700' : 'text-gray-900'
-          }`}>
-            {entrant.name}
-          </span>
+          <div className="flex flex-col items-start gap-1">
+            {entrant.image_url && (
+              <div className="relative w-12 h-12 rounded-md overflow-hidden bg-slate-100 border border-slate-200">
+                <img 
+                  src={entrant.image_url} 
+                  alt={entrant.name}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            )}
+            <span className={`font-semibold text-left ${
+              isWinner ? 'text-green-700' : 
+              isSelected ? '!text-blue-700' : 'text-gray-900'
+            }`}>
+              {entrant.name}
+            </span>
+          </div>
         </div>
         
         {/* Selection Indicator */}
