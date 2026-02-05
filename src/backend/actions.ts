@@ -1,9 +1,11 @@
 'use server'
 
-import { supabase } from '@/utils/supabase';
+import { createClient } from '@/utils/supabase/server';
 import { TournamentResponseObject, RoundData } from '@/types/tournament';
 
 export async function getFullTournament(tournamentId: string): Promise<TournamentResponseObject | null> {
+  const supabase = await createClient();
+
   // 1. Fetch all data in parallel
   const [tRes, mRes, eRes] = await Promise.all([
     supabase.from('tournaments').select('*').eq('id', tournamentId).single(),
