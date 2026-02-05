@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react';
 import { Participant } from '@/types/tournament';
 
 interface MatchupCardProps {
@@ -21,10 +22,16 @@ export default function MatchupCard({
   selectedId, 
   onSelect 
 }: MatchupCardProps) {
+  const [expandedImage, setExpandedImage] = useState<string | null>(null);
   
   const handleSelect = (entrantId: string) => {
     if (!isActive) return;
     onSelect(entrantId);
+  };
+
+  const handleImageClick = (e: React.MouseEvent, url: string) => {
+    e.stopPropagation(); // Prevent card selection
+    setExpandedImage(url);
   };
 
   const renderEntrant = (entrant: Participant | null) => {
@@ -58,7 +65,12 @@ export default function MatchupCard({
           <span className="text-xs font-bold text-slate-400">#{entrant.seed}</span>
           <div className="flex flex-col items-start gap-1">
             {entrant.image_url && (
-              <div className="relative w-12 h-12 rounded-md overflow-hidden bg-slate-100 border border-slate-200">
+              <div 
+                role="button"
+                tabIndex={0}
+                onClick={(e) => handleImageClick(e, entrant.image_url!)}
+                className="relative w-12 h-12 rounded-md overflow-hidden bg-slate-100 border border-slate-200 hover:scale-105 transition-transform cursor-zoom-in active:scale-95"
+              >
                 <img 
                   src={entrant.image_url} 
                   alt={entrant.name}
@@ -103,16 +115,45 @@ export default function MatchupCard({
   };
 
   return (
-    <div className="relative flex flex-col gap-2 p-2 bg-white rounded-2xl shadow-sm border border-slate-100">
-      {renderEntrant(entrant1)}
-      
-      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20 pointer-events-none">
-        <div className="bg-slate-100 text-slate-500 text-[10px] font-black px-2 py-1 rounded-full border-2 border-white uppercase tracking-tighter shadow-sm">
-          VS
+    <>
+      <div className="relative flex flex-col gap-2 p-2 bg-white rounded-2xl shadow-sm border border-slate-100">
+        {renderEntrant(entrant1)}
+        
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20 pointer-events-none">
+          <div className="bg-slate-100 text-slate-500 text-[10px] font-black px-2 py-1 rounded-full border-2 border-white uppercase tracking-tighter shadow-sm">
+            VS
+          </div>
         </div>
+
+        {renderEntrant(entrant2)}
       </div>
 
-      {renderEntrant(entrant2)}
-    </div>
+      {/* Expanded Image Modal */}
+      {expandedImage && (
+        <div 
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+          onClick={() => setExpandedImage(null)}
+        >
+          <div 
+            className="relative max-w-full max-h-full rounded-lg overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()} // Prevent closing when clicking the image itself
+          >
+            <img 
+              src={expandedImage} 
+              alt="Expanded view" 
+              className="max-w-full max-h-[80vh] object-contain"
+            />
+            <button 
+              onClick={() => setExpandedImage(null)}
+              className="absolute top-2 right-2 p-2 bg-black/50 text-white rounded-full hover:bg-black/70 transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
