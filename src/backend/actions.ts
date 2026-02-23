@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/utils/supabase/server';
+import { createAdminClient } from '@/utils/supabase/admin';
 import { TournamentResponseObject, RoundData } from '@/types/tournament';
 
 export async function getFullTournament(tournamentId: string): Promise<TournamentResponseObject | null> {
@@ -26,12 +27,11 @@ export async function getFullTournament(tournamentId: string): Promise<Tournamen
     if (!roundsMap[m.round_number]) {
       roundsMap[m.round_number] = {
         roundNumber: m.round_number,
-        label: `Round ${m.round_number}`, // You can customize this (e.g., "Finals")
+        label: `Round ${m.round_number}`,
         matchups: []
       };
     }
 
-    // Link the raw IDs to the full Entrant objects
     const entrant1 = allEntrants.find(e => e.id === m.entrant_1_id) || null;
     const entrant2 = allEntrants.find(e => e.id === m.entrant_2_id) || null;
 
@@ -40,7 +40,7 @@ export async function getFullTournament(tournamentId: string): Promise<Tournamen
       matchIndex: m.match_index,
       is_active: m.is_active,
       winner_id: m.winner_id,
-      totalVotes: 0, // In a real app, you'd fetch/aggregate votes here
+      totalVotes: 0,
       entrant1: entrant1 ? { ...entrant1, votesInMatch: 0 } : null,
       entrant2: entrant2 ? { ...entrant2, votesInMatch: 0 } : null,
     });
@@ -55,4 +55,34 @@ export async function getFullTournament(tournamentId: string): Promise<Tournamen
     totalEntrants: tournament.total_entrants,
     rounds: Object.values(roundsMap).sort((a, b) => a.roundNumber - b.roundNumber)
   };
+}
+
+export async function submitVotes(
+  selections: Record<string, string>
+): Promise<{ success: boolean; error?: string }> {
+  // Use the regular client to verify the user's identity
+  const supabase = await createClient();
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError || !user) {
+    return { success: false, error: 'You must be signed in to vote.' };
+  }
+
+  // Use the admin client (service role) for the database write, bypassing RLS
+  const adminClient = createAdminClient();
+
+  const votes = Object.entries(selections).map(([matchup_id, selected_entrant_id]) => ({
+    user_id: user.id,
+    matchup_id,
+    selected_entrant_id,
+  }));
+
+  const { error } = await adminClient.from('votes').upsert(votes, {
+    onConflict: 'user_id,matchup_id',
+  });
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  return { success: true };
 }

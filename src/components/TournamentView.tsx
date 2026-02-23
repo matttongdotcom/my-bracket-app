@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { TournamentResponseObject, RoundData } from '@/types/tournament';
+import { submitVotes } from '@/backend/actions';
 import MatchupCard from './MatchupCard';
 
 interface TournamentViewProps {
@@ -11,6 +12,8 @@ interface TournamentViewProps {
 export default function TournamentView({ tournament }: TournamentViewProps) {
   const [activeRoundIndex, setActiveRoundIndex] = useState(0);
   const [selections, setSelections] = useState<Record<string, string>>({});
+  const [submitting, setSubmitting] = useState(false);
+  const [submitMessage, setSubmitMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const rounds = tournament.rounds || [];
   const activeRound = rounds[activeRoundIndex];
@@ -35,10 +38,27 @@ export default function TournamentView({ tournament }: TournamentViewProps) {
   const hasVoteableMatchups = voteableMatchups.length > 0;
   const allSelected = hasVoteableMatchups && voteableMatchups.every(m => selections[m.id]);
 
-  const handleSubmit = () => {
-    if (!allSelected) return;
-    console.log('Submitting votes:', selections);
-    // TODO: Implement actual submission logic
+  const handleSubmit = async () => {
+    if (!allSelected || submitting) return;
+    setSubmitting(true);
+    setSubmitMessage(null);
+
+    const roundSelections: Record<string, string> = {};
+    for (const matchup of voteableMatchups) {
+      if (selections[matchup.id]) {
+        roundSelections[matchup.id] = selections[matchup.id];
+      }
+    }
+
+    const result = await submitVotes(roundSelections);
+
+    if (result.success) {
+      setSubmitMessage({ type: 'success', text: 'Votes submitted!' });
+    } else {
+      setSubmitMessage({ type: 'error', text: result.error || 'Something went wrong.' });
+    }
+
+    setSubmitting(false);
   };
 
   return (
@@ -105,16 +125,29 @@ export default function TournamentView({ tournament }: TournamentViewProps) {
       {/* CTA Footer */}
       {hasVoteableMatchups && (
         <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-slate-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-50 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+          {submitMessage && (
+            <div className={`mb-2 p-2 text-sm text-center rounded-lg ${
+              submitMessage.type === 'success' 
+                ? 'bg-green-50 text-green-700' 
+                : 'bg-red-50 text-red-600'
+            }`}>
+              {submitMessage.text}
+            </div>
+          )}
           <button
             onClick={handleSubmit}
-            disabled={!allSelected}
+            disabled={!allSelected || submitting}
             className={`w-full py-3.5 rounded-xl font-bold text-sm transition-all ${
-              allSelected
+              allSelected && !submitting
                 ? 'bg-blue-600 text-white shadow-lg shadow-blue-200 hover:bg-blue-700 active:scale-[0.98]'
                 : 'bg-slate-100 text-slate-400 cursor-not-allowed'
             }`}
           >
-            {allSelected ? 'Submit Picks' : `Make ${voteableMatchups.length - Object.keys(selections).filter(k => voteableMatchups.find(m => m.id === k)).length} more selection(s)`}
+            {submitting 
+              ? 'Submitting...' 
+              : allSelected 
+                ? 'Submit Picks' 
+                : `Make ${voteableMatchups.length - Object.keys(selections).filter(k => voteableMatchups.find(m => m.id === k)).length} more selection(s)`}
           </button>
         </div>
       )}
