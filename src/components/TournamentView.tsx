@@ -7,30 +7,37 @@ import MatchupCard from './MatchupCard';
 
 interface TournamentViewProps {
   tournament: TournamentResponseObject;
+  initialSelections?: Record<string, string>;
 }
 
-export default function TournamentView({ tournament }: TournamentViewProps) {
+export default function TournamentView({ tournament, initialSelections = {} }: TournamentViewProps) {
   const [activeRoundIndex, setActiveRoundIndex] = useState(0);
-  const [selections, setSelections] = useState<Record<string, string>>({});
+  const [selections, setSelections] = useState<Record<string, string>>(initialSelections);
   const [submitting, setSubmitting] = useState(false);
-  const [submitMessage, setSubmitMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const hasExistingVotes = Object.keys(initialSelections).length > 0;
+  const [submitMessage, setSubmitMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(
+    hasExistingVotes ? { type: 'success', text: 'Votes submitted!' } : null
+  );
 
   const rounds = tournament.rounds || [];
   const activeRound = rounds[activeRoundIndex];
 
-  // Helper to toggle selection
+  const selectionsChanged = hasExistingVotes && JSON.stringify(selections) !== JSON.stringify(initialSelections);
+
   const handleSelect = (matchId: string, entrantId: string) => {
     setSelections(prev => {
       const current = prev[matchId];
-      // If clicking the already selected one, deselect it
       if (current === entrantId) {
         const copy = { ...prev };
         delete copy[matchId];
         return copy;
       }
-      // Otherwise set new selection
       return { ...prev, [matchId]: entrantId };
     });
+    if (submitMessage?.type === 'success') {
+      setSubmitMessage(null);
+    }
   };
 
   // Validation Logic
@@ -136,9 +143,9 @@ export default function TournamentView({ tournament }: TournamentViewProps) {
           )}
           <button
             onClick={handleSubmit}
-            disabled={!allSelected || submitting}
+            disabled={!allSelected || submitting || (hasExistingVotes && !selectionsChanged)}
             className={`w-full py-3.5 rounded-xl font-bold text-sm transition-all ${
-              allSelected && !submitting
+              allSelected && !submitting && !(hasExistingVotes && !selectionsChanged)
                 ? 'bg-blue-600 text-white shadow-lg shadow-blue-200 hover:bg-blue-700 active:scale-[0.98]'
                 : 'bg-slate-100 text-slate-400 cursor-not-allowed'
             }`}
@@ -146,7 +153,7 @@ export default function TournamentView({ tournament }: TournamentViewProps) {
             {submitting 
               ? 'Submitting...' 
               : allSelected 
-                ? 'Submit Picks' 
+                ? (selectionsChanged ? 'Update Picks' : 'Submit Picks')
                 : `Make ${voteableMatchups.length - Object.keys(selections).filter(k => voteableMatchups.find(m => m.id === k)).length} more selection(s)`}
           </button>
         </div>

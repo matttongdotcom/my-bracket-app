@@ -57,6 +57,42 @@ export async function getFullTournament(tournamentId: string): Promise<Tournamen
   };
 }
 
+export async function getUserVotes(
+  tournamentId: string
+): Promise<Record<string, string>> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return {};
+
+  const adminClient = createAdminClient();
+
+  // Get all matchup IDs for this tournament
+  const { data: matchups } = await adminClient
+    .from('matchups')
+    .select('id')
+    .eq('tournament_id', tournamentId);
+
+  if (!matchups || matchups.length === 0) return {};
+
+  const matchupIds = matchups.map(m => m.id);
+
+  // Fetch this user's votes for those matchups
+  const { data: votes } = await adminClient
+    .from('votes')
+    .select('matchup_id, selected_entrant_id')
+    .eq('user_id', user.id)
+    .in('matchup_id', matchupIds);
+
+  if (!votes) return {};
+
+  // Return as a map of matchup_id -> selected_entrant_id
+  const selectionsMap: Record<string, string> = {};
+  votes.forEach(v => {
+    selectionsMap[v.matchup_id] = v.selected_entrant_id;
+  });
+  return selectionsMap;
+}
+
 export async function submitVotes(
   selections: Record<string, string>
 ): Promise<{ success: boolean; error?: string }> {
