@@ -11,19 +11,21 @@ interface TournamentViewProps {
 }
 
 export default function TournamentView({ tournament, initialSelections = {} }: TournamentViewProps) {
-  const [activeRoundIndex, setActiveRoundIndex] = useState(0);
+  const currentRoundIndex = Math.max(0, (tournament.rounds || []).findIndex(r => r.roundNumber === tournament.currentRound));
+  const [activeRoundIndex, setActiveRoundIndex] = useState(currentRoundIndex);
   const [selections, setSelections] = useState<Record<string, string>>(initialSelections);
   const [submitting, setSubmitting] = useState(false);
 
-  const hasExistingVotes = Object.keys(initialSelections).length > 0;
-  const [submitMessage, setSubmitMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(
-    hasExistingVotes ? { type: 'success', text: 'Votes submitted!' } : null
-  );
+  const [submitMessage, setSubmitMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const rounds = tournament.rounds || [];
   const activeRound = rounds[activeRoundIndex];
 
-  const selectionsChanged = hasExistingVotes && JSON.stringify(selections) !== JSON.stringify(initialSelections);
+  // Check if the user has existing votes for the currently viewed round's voteable matchups
+  const activeRoundVoteableMatchups = activeRound?.matchups.filter(m => m.is_active && !m.winner_id) || [];
+  const hasExistingVotesForRound = activeRoundVoteableMatchups.some(m => !!initialSelections[m.id]);
+  const selectionsChanged = hasExistingVotesForRound && 
+    activeRoundVoteableMatchups.some(m => selections[m.id] !== initialSelections[m.id]);
 
   const handleSelect = (matchId: string, entrantId: string) => {
     setSelections(prev => {
@@ -132,20 +134,20 @@ export default function TournamentView({ tournament, initialSelections = {} }: T
       {/* CTA Footer */}
       {hasVoteableMatchups && (
         <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-slate-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-50 pb-[calc(1rem+env(safe-area-inset-bottom))]">
-          {submitMessage && (
+          {(submitMessage || (hasExistingVotesForRound && !selectionsChanged)) && (
             <div className={`mb-2 p-2 text-sm text-center rounded-lg ${
-              submitMessage.type === 'success' 
-                ? 'bg-green-50 text-green-700' 
-                : 'bg-red-50 text-red-600'
+              (submitMessage?.type === 'error') 
+                ? 'bg-red-50 text-red-600'
+                : 'bg-green-50 text-green-700'
             }`}>
-              {submitMessage.text}
+              {submitMessage?.text || 'Votes submitted!'}
             </div>
           )}
           <button
             onClick={handleSubmit}
-            disabled={!allSelected || submitting || (hasExistingVotes && !selectionsChanged)}
+            disabled={!allSelected || submitting || (hasExistingVotesForRound && !selectionsChanged)}
             className={`w-full py-3.5 rounded-xl font-bold text-sm transition-all ${
-              allSelected && !submitting && !(hasExistingVotes && !selectionsChanged)
+              allSelected && !submitting && !(hasExistingVotesForRound && !selectionsChanged)
                 ? 'bg-blue-600 text-white shadow-lg shadow-blue-200 hover:bg-blue-700 active:scale-[0.98]'
                 : 'bg-slate-100 text-slate-400 cursor-not-allowed'
             }`}
