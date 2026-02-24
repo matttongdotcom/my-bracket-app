@@ -11,15 +11,29 @@ interface TournamentViewProps {
 }
 
 export default function TournamentView({ tournament, initialSelections = {} }: TournamentViewProps) {
-  const currentRoundIndex = Math.max(0, (tournament.rounds || []).findIndex(r => r.roundNumber === tournament.currentRound));
-  const [activeRoundIndex, setActiveRoundIndex] = useState(currentRoundIndex);
+  const rounds_ = tournament.rounds || [];
+  const defaultTabIndex = tournament.status === 'completed'
+    ? rounds_.length  // "Results" tab
+    : Math.max(0, rounds_.findIndex(r => r.roundNumber === tournament.currentRound));
+  const [activeRoundIndex, setActiveRoundIndex] = useState(defaultTabIndex);
   const [selections, setSelections] = useState<Record<string, string>>(initialSelections);
   const [submitting, setSubmitting] = useState(false);
 
   const [submitMessage, setSubmitMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const rounds = tournament.rounds || [];
-  const activeRound = rounds[activeRoundIndex];
+  const isCompleted = tournament.status === 'completed';
+  const showingResults = activeRoundIndex === rounds.length;
+  const activeRound = showingResults ? null : rounds[activeRoundIndex];
+
+  // Find the winner from the final round's matchup
+  const finalRound = rounds[rounds.length - 1];
+  const finalMatchup = finalRound?.matchups[0];
+  const winner = finalMatchup?.winner_id === finalMatchup?.entrant1?.id
+    ? finalMatchup?.entrant1
+    : finalMatchup?.winner_id === finalMatchup?.entrant2?.id
+      ? finalMatchup?.entrant2
+      : null;
 
   // Check if the user has existing votes for the currently viewed round's voteable matchups
   const activeRoundVoteableMatchups = activeRound?.matchups.filter(m => m.is_active && !m.winner_id) || [];
@@ -99,12 +113,55 @@ export default function TournamentView({ tournament, initialSelections = {} }: T
               </button>
             );
           })}
+          {isCompleted && (
+            <button
+              onClick={() => setActiveRoundIndex(rounds.length)}
+              className={`py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+                showingResults
+                  ? 'border-amber-500 text-amber-600'
+                  : 'border-transparent text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              Results
+            </button>
+          )}
         </div>
       </div>
 
       {/* Content Area */}
       <div className="flex-1 p-4 space-y-4 pb-32">
-        {activeRound ? (
+        {showingResults && winner ? (
+          <div className="flex flex-col items-center pt-8 gap-6">
+            <div className="text-xs font-bold text-amber-500 uppercase tracking-widest">
+              Champion
+            </div>
+
+            <div className="relative flex flex-col items-center gap-4 p-8 bg-gradient-to-b from-amber-50 to-white rounded-3xl border-2 border-amber-200 shadow-lg shadow-amber-100/50 w-full">
+              <div className="absolute -top-5 text-4xl">
+                🏆
+              </div>
+
+              {winner.image_url && (
+                <div className="w-24 h-24 rounded-2xl overflow-hidden border-2 border-amber-300 shadow-md bg-slate-100">
+                  <img
+                    src={winner.image_url}
+                    alt={winner.name}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              )}
+
+              <div className="text-center">
+                <div className="text-2xl font-bold text-slate-900">{winner.name}</div>
+                <div className="text-sm text-amber-600 font-medium mt-1">Seed #{winner.seed}</div>
+              </div>
+            </div>
+
+            <div className="text-sm text-slate-400 text-center mt-2">
+              Winner of {tournament.name}
+            </div>
+          </div>
+        ) : activeRound ? (
           <>
             <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
               {activeRound.label} Matches
