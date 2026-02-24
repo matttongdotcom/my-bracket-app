@@ -175,6 +175,7 @@ export default function TournamentView({ tournament, initialSelections = {} }: T
                   entrant2={matchup.entrant2}
                   isActive={matchup.is_active}
                   winnerId={matchup.winner_id}
+                  votersByEntrant={matchup.votersByEntrant}
                   selectedId={selections[matchup.id] || null}
                   onSelect={(entrantId) => handleSelect(matchup.id, entrantId)}
                 />

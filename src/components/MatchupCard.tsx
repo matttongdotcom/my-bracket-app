@@ -11,6 +11,7 @@ interface MatchupCardProps {
   winnerId: string | null;
   selectedId: string | null;
   onSelect: (entrantId: string) => void;
+  votersByEntrant?: Record<string, string[]>;
 }
 
 export default function MatchupCard({ 
@@ -20,7 +21,8 @@ export default function MatchupCard({
   isActive, 
   winnerId, 
   selectedId, 
-  onSelect 
+  onSelect,
+  votersByEntrant = {},
 }: MatchupCardProps) {
   const [expandedImage, setExpandedImage] = useState<string | null>(null);
   
@@ -45,8 +47,8 @@ export default function MatchupCard({
 
     const isWinner = winnerId === entrant.id;
     const isSelected = selectedId === entrant.id;
-    // Disable interaction if the match is not active or if a winner is already decided
     const isDisabled = !isActive || !!winnerId;
+    const voters = votersByEntrant[entrant.id] || [];
 
     return (
       <button
@@ -84,6 +86,15 @@ export default function MatchupCard({
             }`}>
               {entrant.name}
             </span>
+            {!!winnerId && voters.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-1">
+                {voters.map((name, i) => (
+                  <span key={i} className="text-[11px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-md">
+                    {name}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         </div>
         

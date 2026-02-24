@@ -22,6 +22,7 @@ export type TournamentResponseObject = {
     entrant2: Participant | null;
     winner_id: string | null;
     totalVotes: number;
+    votersByEntrant: Record<string, string[]>;
   };
   
   export type Participant = {

@@ -6,12 +6,13 @@ import { TournamentResponseObject, RoundData } from '@/types/tournament';
 
 export async function getFullTournament(tournamentId: string): Promise<TournamentResponseObject | null> {
   const supabase = await createClient();
+  const adminClient = createAdminClient();
 
-  // 1. Fetch all data in parallel
+  // 1. Fetch tournament, matchups, and entrants in parallel
   const [tRes, mRes, eRes] = await Promise.all([
     supabase.from('tournaments').select('*').eq('id', tournamentId).single(),
     supabase.from('matchups').select('*').eq('tournament_id', tournamentId).order('match_index', { ascending: true }),
-    supabase.from('entrants').select('*').eq('tournament_id', tournamentId)
+    supabase.from('entrants').select('*').eq('tournament_id', tournamentId),
   ]);
 
   if (tRes.error || !tRes.data) return null;
@@ -19,6 +20,42 @@ export async function getFullTournament(tournamentId: string): Promise<Tournamen
   const tournament = tRes.data;
   const allMatchups = mRes.data || [];
   const allEntrants = eRes.data || [];
+
+  // Fetch all votes for this tournament's matchups
+  const matchupIds = allMatchups.map(m => m.id);
+  const { data: allVotes } = await adminClient
+    .from('votes')
+    .select('matchup_id, selected_entrant_id, user_id')
+    .in('matchup_id', matchupIds);
+
+  // Fetch display names for all voters
+  const voterIds = [...new Set((allVotes || []).map(v => v.user_id))];
+  const voterNameMap: Record<string, string> = {};
+
+  if (voterIds.length > 0) {
+    const { data: { users } } = await adminClient.auth.admin.listUsers({ perPage: 1000 });
+    if (users) {
+      users.forEach(u => {
+        if (voterIds.includes(u.id)) {
+          voterNameMap[u.id] = u.user_metadata?.display_name || 'empty';
+        }
+      });
+    }
+  }
+
+  // Build a map: matchup_id -> entrant_id -> voter display names
+  const votersByMatchup: Record<string, Record<string, string[]>> = {};
+  (allVotes || []).forEach(v => {
+    if (!votersByMatchup[v.matchup_id]) {
+      votersByMatchup[v.matchup_id] = {};
+    }
+    if (!votersByMatchup[v.matchup_id][v.selected_entrant_id]) {
+      votersByMatchup[v.matchup_id][v.selected_entrant_id] = [];
+    }
+    votersByMatchup[v.matchup_id][v.selected_entrant_id].push(
+      voterNameMap[v.user_id] || 'empty'
+    );
+  });
 
   // 2. Group matchups by round_number
   const roundsMap: Record<number, RoundData> = {};
@@ -43,6 +80,7 @@ export async function getFullTournament(tournamentId: string): Promise<Tournamen
       totalVotes: 0,
       entrant1: entrant1 ? { ...entrant1, votesInMatch: 0 } : null,
       entrant2: entrant2 ? { ...entrant2, votesInMatch: 0 } : null,
+      votersByEntrant: votersByMatchup[m.id] || {},
     });
   });
 
