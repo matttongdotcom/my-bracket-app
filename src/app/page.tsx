@@ -11,6 +11,7 @@ export default function LoginPage() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [displayName, setDisplayName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -26,6 +27,11 @@ export default function LoginPage() {
         const { error } = await supabase.auth.signUp({
           email,
           password,
+          options: {
+            data: {
+              display_name: displayName,
+            },
+          },
         });
         if (error) throw error;
         setMessage('Account created! Please check your email to confirm your subscription.');
@@ -72,6 +78,25 @@ export default function LoginPage() {
               </div>
             )}
 
+            {isSignUp && (
+              <div>
+                <label htmlFor="displayName" className="block text-sm font-medium text-slate-700 mb-1">
+                  Display Name
+                </label>
+                <input
+                  id="displayName"
+                  name="displayName"
+                  type="text"
+                  autoComplete="name"
+                  required
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-slate-900 placeholder:text-slate-400"
+                  placeholder="Your public name"
+                />
+              </div>
+            )}
+
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1">
                 Email Address
@@ -108,9 +133,9 @@ export default function LoginPage() {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !email.trim() || !password.trim() || (isSignUp && !displayName.trim())}
               className={`w-full py-3.5 rounded-xl font-bold text-white shadow-lg transition-all transform active:scale-[0.98] ${
-                loading 
+                loading || !email.trim() || !password.trim() || (isSignUp && !displayName.trim())
                   ? 'bg-slate-400 cursor-not-allowed' 
                   : 'bg-blue-600 hover:bg-blue-700 shadow-blue-200'
               }`}
@@ -125,6 +150,7 @@ export default function LoginPage() {
               <button
                 onClick={() => {
                   setIsSignUp(!isSignUp);
+                  setDisplayName('');
                   setError(null);
                   setMessage(null);
                 }}
