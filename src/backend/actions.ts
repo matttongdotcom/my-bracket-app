@@ -2,7 +2,27 @@
 
 import { createClient } from '@/utils/supabase/server';
 import { createAdminClient } from '@/utils/supabase/admin';
-import { TournamentResponseObject, RoundData } from '@/types/tournament';
+import { TournamentResponseObject, TournamentSummary, RoundData } from '@/types/tournament';
+
+export async function getAllTournaments(): Promise<TournamentSummary[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from('tournaments')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error || !data) return [];
+
+  return data.map(t => ({
+    id: t.id,
+    name: t.name,
+    status: t.status,
+    currentRound: t.current_round,
+    totalEntrants: t.total_entrants,
+    createdAt: t.created_at,
+  }));
+}
 
 export async function getFullTournament(tournamentId: string): Promise<TournamentResponseObject | null> {
   const supabase = await createClient();

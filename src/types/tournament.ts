@@ -1,4 +1,13 @@
-export type TournamentResponseObject = {
+  export type TournamentSummary = {
+    id: string;
+    name: string;
+    status: 'open' | 'voting' | 'completed';
+    currentRound: number;
+    totalEntrants: number;
+    createdAt: string;
+  };
+
+  export type TournamentResponseObject = {
     id: string;
     name: string;
     status: 'open' | 'voting' | 'completed';
