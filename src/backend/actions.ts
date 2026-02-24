@@ -24,69 +24,73 @@ export async function getAllTournaments(): Promise<TournamentSummary[]> {
   }));
 }
 
-export async function getFullTournament(tournamentId: string): Promise<TournamentResponseObject | null> {
+export async function getTournamentPageData(tournamentId: string): Promise<{
+  tournament: TournamentResponseObject | null;
+  userVotes: Record<string, string>;
+}> {
   const supabase = await createClient();
   const adminClient = createAdminClient();
 
-  // 1. Fetch tournament, matchups, and entrants in parallel
-  const [tRes, mRes, eRes] = await Promise.all([
+  // Batch 1: fetch user, tournament, matchups, and entrants in parallel
+  const [userRes, tRes, mRes, eRes] = await Promise.all([
+    supabase.auth.getUser(),
     supabase.from('tournaments').select('*').eq('id', tournamentId).single(),
     supabase.from('matchups').select('*').eq('tournament_id', tournamentId).order('match_index', { ascending: true }),
     supabase.from('entrants').select('*').eq('tournament_id', tournamentId),
   ]);
 
-  if (tRes.error || !tRes.data) return null;
+  if (tRes.error || !tRes.data) return { tournament: null, userVotes: {} };
 
   const tournament = tRes.data;
   const allMatchups = mRes.data || [];
   const allEntrants = eRes.data || [];
+  const currentUserId = userRes.data?.user?.id;
 
-  // Fetch all votes for this tournament's matchups
+  // Batch 2: fetch votes for all matchups
   const matchupIds = allMatchups.map(m => m.id);
   const { data: allVotes } = await adminClient
     .from('votes')
     .select('matchup_id, selected_entrant_id, user_id')
     .in('matchup_id', matchupIds);
 
-  // Fetch display names for all voters
+  // Batch 3: fetch display names from profiles table
   const voterIds = [...new Set((allVotes || []).map(v => v.user_id))];
   const voterNameMap: Record<string, string> = {};
 
   if (voterIds.length > 0) {
-    const { data: { users } } = await adminClient.auth.admin.listUsers({ perPage: 1000 });
-    if (users) {
-      users.forEach(u => {
-        if (voterIds.includes(u.id)) {
-          voterNameMap[u.id] = u.user_metadata?.display_name || 'empty';
-        }
+    const { data: profiles } = await adminClient
+      .from('profiles')
+      .select('id, display_name')
+      .in('id', voterIds);
+
+    if (profiles) {
+      profiles.forEach(p => {
+        voterNameMap[p.id] = p.display_name || 'Anonymous';
       });
     }
   }
 
-  // Build a map: matchup_id -> entrant_id -> voter display names
+  // Build voter display names map per matchup
   const votersByMatchup: Record<string, Record<string, string[]>> = {};
   (allVotes || []).forEach(v => {
-    if (!votersByMatchup[v.matchup_id]) {
-      votersByMatchup[v.matchup_id] = {};
-    }
-    if (!votersByMatchup[v.matchup_id][v.selected_entrant_id]) {
-      votersByMatchup[v.matchup_id][v.selected_entrant_id] = [];
-    }
-    votersByMatchup[v.matchup_id][v.selected_entrant_id].push(
-      voterNameMap[v.user_id] || 'empty'
-    );
+    if (!votersByMatchup[v.matchup_id]) votersByMatchup[v.matchup_id] = {};
+    if (!votersByMatchup[v.matchup_id][v.selected_entrant_id]) votersByMatchup[v.matchup_id][v.selected_entrant_id] = [];
+    votersByMatchup[v.matchup_id][v.selected_entrant_id].push(voterNameMap[v.user_id] || 'Anonymous');
   });
 
-  // 2. Group matchups by round_number
-  const roundsMap: Record<number, RoundData> = {};
+  // Extract current user's votes from the same dataset
+  const userVotes: Record<string, string> = {};
+  if (currentUserId) {
+    (allVotes || []).filter(v => v.user_id === currentUserId).forEach(v => {
+      userVotes[v.matchup_id] = v.selected_entrant_id;
+    });
+  }
 
+  // Group matchups by round
+  const roundsMap: Record<number, RoundData> = {};
   allMatchups.forEach((m) => {
     if (!roundsMap[m.round_number]) {
-      roundsMap[m.round_number] = {
-        roundNumber: m.round_number,
-        label: `Round ${m.round_number}`,
-        matchups: []
-      };
+      roundsMap[m.round_number] = { roundNumber: m.round_number, label: `Round ${m.round_number}`, matchups: [] };
     }
 
     const entrant1 = allEntrants.find(e => e.id === m.entrant_1_id) || null;
@@ -104,51 +108,17 @@ export async function getFullTournament(tournamentId: string): Promise<Tournamen
     });
   });
 
-  // 3. Assemble the final nested object
   return {
-    id: tournament.id,
-    name: tournament.name,
-    status: tournament.status,
-    currentRound: tournament.current_round,
-    totalEntrants: tournament.total_entrants,
-    rounds: Object.values(roundsMap).sort((a, b) => a.roundNumber - b.roundNumber)
+    tournament: {
+      id: tournament.id,
+      name: tournament.name,
+      status: tournament.status,
+      currentRound: tournament.current_round,
+      totalEntrants: tournament.total_entrants,
+      rounds: Object.values(roundsMap).sort((a, b) => a.roundNumber - b.roundNumber),
+    },
+    userVotes,
   };
-}
-
-export async function getUserVotes(
-  tournamentId: string
-): Promise<Record<string, string>> {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return {};
-
-  const adminClient = createAdminClient();
-
-  // Get all matchup IDs for this tournament
-  const { data: matchups } = await adminClient
-    .from('matchups')
-    .select('id')
-    .eq('tournament_id', tournamentId);
-
-  if (!matchups || matchups.length === 0) return {};
-
-  const matchupIds = matchups.map(m => m.id);
-
-  // Fetch this user's votes for those matchups
-  const { data: votes } = await adminClient
-    .from('votes')
-    .select('matchup_id, selected_entrant_id')
-    .eq('user_id', user.id)
-    .in('matchup_id', matchupIds);
-
-  if (!votes) return {};
-
-  // Return as a map of matchup_id -> selected_entrant_id
-  const selectionsMap: Record<string, string> = {};
-  votes.forEach(v => {
-    selectionsMap[v.matchup_id] = v.selected_entrant_id;
-  });
-  return selectionsMap;
 }
 
 export async function submitVotes(

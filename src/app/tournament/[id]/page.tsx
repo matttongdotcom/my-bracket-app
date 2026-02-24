@@ -1,15 +1,11 @@
 import TournamentView from '@/components/TournamentView';
-import { getFullTournament, getUserVotes } from '@/backend/actions';
+import { getTournamentPageData } from '@/backend/actions';
 
 export default async function TournamentDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const { tournament, userVotes } = await getTournamentPageData(id);
 
-  const [tournamentData, existingVotes] = await Promise.all([
-    getFullTournament(id),
-    getUserVotes(id),
-  ]);
-
-  if (!tournamentData) {
+  if (!tournament) {
     return (
       <main className="min-h-screen bg-slate-100 flex items-center justify-center">
         <div className="text-center p-8 bg-white rounded-xl shadow-sm">
@@ -22,7 +18,7 @@ export default async function TournamentDetailPage({ params }: { params: Promise
 
   return (
     <main className="min-h-screen bg-slate-100 flex justify-center">
-      <TournamentView tournament={tournamentData} initialSelections={existingVotes} />
+      <TournamentView tournament={tournament} initialSelections={userVotes} />
     </main>
   );
 }
