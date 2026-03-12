@@ -19,6 +19,7 @@ export default function TournamentView({ tournament, initialSelections = {} }: T
     : Math.max(0, rounds_.findIndex(r => r.roundNumber === tournament.currentRound));
   const [activeRoundIndex, setActiveRoundIndex] = useState(defaultTabIndex);
   const [selections, setSelections] = useState<Record<string, string>>(initialSelections);
+  const [baselineSelections, setBaselineSelections] = useState<Record<string, string>>(initialSelections);
   const [submitting, setSubmitting] = useState(false);
 
   const [submitMessage, setSubmitMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -39,9 +40,9 @@ export default function TournamentView({ tournament, initialSelections = {} }: T
 
   // Check if the user has existing votes for the currently viewed round's voteable matchups
   const activeRoundVoteableMatchups = activeRound?.matchups.filter(m => m.is_active && !m.winner_id) || [];
-  const hasExistingVotesForRound = activeRoundVoteableMatchups.some(m => !!initialSelections[m.id]);
+  const hasExistingVotesForRound = activeRoundVoteableMatchups.some(m => !!baselineSelections[m.id]);
   const selectionsChanged = hasExistingVotesForRound && 
-    activeRoundVoteableMatchups.some(m => selections[m.id] !== initialSelections[m.id]);
+    activeRoundVoteableMatchups.some(m => selections[m.id] !== baselineSelections[m.id]);
 
   const handleSelect = (matchId: string, entrantId: string) => {
     setSelections(prev => {
@@ -78,6 +79,7 @@ export default function TournamentView({ tournament, initialSelections = {} }: T
     const result = await submitVotes(roundSelections);
 
     if (result.success) {
+      setBaselineSelections({ ...selections });
       setSubmitMessage({ type: 'success', text: 'Votes submitted!' });
     } else {
       setSubmitMessage({ type: 'error', text: result.error || 'Something went wrong.' });
