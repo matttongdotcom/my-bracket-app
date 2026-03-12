@@ -34,7 +34,7 @@ export default function LoginPage() {
           },
         });
         if (error) throw error;
-        setMessage('Account created! Please check your email to confirm your subscription.');
+        setMessage('Success! Hit Sign In to continue.');
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email,
