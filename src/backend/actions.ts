@@ -10,6 +10,7 @@ export async function getAllTournaments(): Promise<TournamentSummary[]> {
   const { data, error } = await supabase
     .from('tournaments')
     .select('*')
+    .neq('status', 'archived')
     .order('created_at', { ascending: false });
 
   if (error || !data) return [];

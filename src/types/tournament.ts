@@ -1,7 +1,7 @@
   export type TournamentSummary = {
     id: string;
     name: string;
-    status: 'open' | 'voting' | 'completed';
+    status: 'open' | 'voting' | 'completed' | 'archived';
     currentRound: number;
     totalEntrants: number;
     createdAt: string;
@@ -10,7 +10,7 @@
   export type TournamentResponseObject = {
     id: string;
     name: string;
-    status: 'open' | 'voting' | 'completed';
+    status: 'open' | 'voting' | 'completed' | 'archived';
     currentRound: number;
     totalEntrants: number;
     // This is where the magic happens: a nested array of rounds
