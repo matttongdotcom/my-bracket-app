@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { createClient } from '@/utils/supabase/client';
 
 export default function LoginPage() {
@@ -129,6 +130,13 @@ export default function LoginPage() {
                 className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-slate-900 placeholder:text-slate-400"
                 placeholder="••••••••"
               />
+              {!isSignUp && (
+                <div className="mt-1.5 text-right">
+                  <Link href="/forgot-password" className="text-xs text-blue-600 hover:text-blue-700 font-medium">
+                    Forgot Password?
+                  </Link>
+                </div>
+              )}
             </div>
 
             <button
